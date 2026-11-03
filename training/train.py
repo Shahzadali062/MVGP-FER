@@ -1,5 +1,3 @@
-"""Train one of the M1/M2/M3 reference models on prepared FER arrays.
-
 From the repository root: python -m training.train --help
 """
 
