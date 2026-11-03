@@ -1,13 +1,11 @@
-# Model components
+# Model
 
-Shared components for the three ablation variants:
+The model code is split into reusable parts:
 
-- `blocks.py`: stem and inverted residual blocks
-- `attention.py`: directional and global attention
-- `mixer.py`: gated spatial mixer
-- `visual.py`: visual feature extraction and classifier
-- `geometry.py`: landmark MLP and fixed prototype distance
-- `fusion.py`: sample-dependent residual fusion
-- `mvgp_fer.py`: combined model (M3)
+- `blocks.py` — convolutional stem and residual blocks
+- `mixer.py` — spatial token mixing
+- `visual.py` — visual feature extractor and seven-class classifier
+- `fusion.py` — adaptive logit fusion
+- `mvgp_fer.py` — assembly interface for externally supplied model components
 
-The original trained architecture has not been verified against this implementation. M3 needs genuine 104-dimensional landmark features and a genuine class-prototype matrix. No placeholder prototypes are supplied.
+`attention.py` and `geometry.py` have been removed. The visual-only baseline still works, but the full MVGP-FER model needs the original attention module, landmark model and class prototypes. These are not included here. The public training script supports the visual baseline only.

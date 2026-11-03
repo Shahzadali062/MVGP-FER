@@ -1,4 +1,4 @@
-"""Train reference ablation models on prepared .npy arrays.
+"""Train the visual baseline on prepared .npy arrays.
 
 Run from repository root: python -m training.train --help
 """
@@ -11,13 +11,13 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from .build_model import load_prototypes, make_model
-from .dataset import PreparedFERDataset, compute_train_statistics, read_manifest
+from .build_model import make_model
+from .dataset import PreparedFERDataset, read_manifest
 from .engine import run_epoch
 
 
 def split_training(rows: list[dict], seed: int = 42, fraction: float = 0.1):
-    """A reproducible stratified internal validation holdout (NOT an official split)."""
+    """Reserve a stratified validation set from the training split."""
     rng = random.Random(seed)
     by_class: dict[int, list[dict]] = {}
     for row in rows:
@@ -34,11 +34,10 @@ def split_training(rows: list[dict], seed: int = 42, fraction: float = 0.1):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Train M1, M2, or M3 reference implementation")
+    parser = argparse.ArgumentParser(description="Train the visual-only M1 baseline")
     parser.add_argument("--manifest", type=Path, required=True)
-    parser.add_argument("--variant", choices=("M1", "M2", "M3"), required=True)
+    parser.add_argument("--variant", choices=("M1",), default="M1")
     parser.add_argument("--dataset", choices=("rafdb", "fer2013"), required=True)
-    parser.add_argument("--prototypes", type=Path, help="Original 7x16 prototype matrix; M3 only")
     parser.add_argument("--out", type=Path, required=True, help="Checkpoint outside public repository")
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--batch-size", type=int, default=8)
@@ -65,29 +64,21 @@ def main():
     if args.dataset == "rafdb":
         available = [row for row in rows if row["split"].lower() == "train"]
         train_rows, val_rows = split_training(available, args.seed)
-        print("RAF-DB: using 10% STRATIFIED TRAIN HOLDOUT for validation; official test is untouched")
+        print("RAF-DB: reserving 10% of training images for validation; test images are untouched")
     else:
         train_rows = [row for row in rows if row["split"] == "Training"]
         val_rows = [row for row in rows if row["split"] == "PublicTest"]
     if not train_rows or not val_rows:
         parser.error("Training/validation partition is empty; check source dataset split names")
 
-    prototypes = None
-    mean = std = None
-    if args.variant == "M3":
-        if args.prototypes is None:
-            parser.error("M3 requires --prototypes pointing to the verified 7x16 matrix")
-        prototypes = load_prototypes(args.prototypes)
-        mean, std = compute_train_statistics(args.manifest, train_rows)
-
-    train_data = PreparedFERDataset(args.manifest, train_rows, mean, std)
-    val_data = PreparedFERDataset(args.manifest, val_rows, mean, std)
+    train_data = PreparedFERDataset(args.manifest, train_rows)
+    val_data = PreparedFERDataset(args.manifest, val_rows)
     train_loader = DataLoader(train_data, batch_size=args.batch_size, shuffle=True,
                               num_workers=args.workers, pin_memory=device.type == "cuda",
-                              drop_last=args.variant == "M3")
+                              drop_last=False)
     val_loader = DataLoader(val_data, batch_size=args.batch_size, shuffle=False,
                             num_workers=args.workers, pin_memory=device.type == "cuda")
-    model = make_model(args.variant, prototypes).to(device)
+    model = make_model(args.variant).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     amp = device.type == "cuda"
     scaler = torch.amp.GradScaler("cuda") if amp else None
@@ -109,13 +100,10 @@ def main():
             torch.save({
                 "variant": args.variant,
                 "model_state": model.state_dict(),
-                "prototypes": prototypes,
-                "feature_mean": torch.tensor(mean) if mean is not None else None,
-                "feature_std": torch.tensor(std) if std is not None else None,
                 "dataset": args.dataset,
                 "checkpoint_selection": "validation cross-entropy",
                 "seed": args.seed,
-                "source": "unverified manuscript-based reference implementation",
+                "source": "visual baseline implementation",
             }, args.out)
         else:
             epochs_without_gain += 1

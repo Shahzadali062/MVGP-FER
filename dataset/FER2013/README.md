@@ -1,10 +1,5 @@
-﻿# FER2013 Dataset
+# FER2013
 
-Official dataset download page:
+The original FER2013 CSV is available through the [Kaggle challenge page](https://www.kaggle.com/c/challenges-in-representation-learning-facial-expression-recognition-challenge/data). A Kaggle account may be required.
 
-https://www.kaggle.com/c/challenges-in-representation-learning-facial-expression-recognition-challenge/data
-
-Download FER2013 directly from Kaggle.
-
-A Kaggle account and acceptance of the applicable terms may be required.
-No dataset files are hosted in this repository.
+Keep the downloaded data on your own computer. The repository contains no FER2013 images or CSV files.

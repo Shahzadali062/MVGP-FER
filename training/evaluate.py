@@ -3,7 +3,6 @@
 import argparse
 from pathlib import Path
 
-import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
@@ -24,19 +23,15 @@ def main():
     rows = [row for row in read_manifest(args.manifest) if row["split"] == args.split]
     if not rows:
         parser.error("No rows found for the requested split")
-    mean = saved.get("feature_mean")
-    std = saved.get("feature_std")
-    dataset = PreparedFERDataset(args.manifest, rows,
-                                 mean.numpy() if mean is not None else None,
-                                 std.numpy() if std is not None else None)
+    dataset = PreparedFERDataset(args.manifest, rows)
     loader = DataLoader(dataset, batch_size=args.batch_size, shuffle=False)
-    model = make_model(saved["variant"], saved.get("prototypes")).to(device)
+    model = make_model(saved["variant"]).to(device)
     model.load_state_dict(saved["model_state"])
     scores = run_epoch(model, loader, device)
     print(f"Reference model {saved['variant']} | {args.split}: "
           f"accuracy={scores['accuracy']:.4f}, loss={scores['loss']:.4f}, "
           f"samples={scores['samples']}")
-    print("This is a new evaluation; it does not validate manuscript-reported results.")
+    print("These scores describe this checkpoint, not the manuscript experiments.")
 
 
 if __name__ == "__main__":

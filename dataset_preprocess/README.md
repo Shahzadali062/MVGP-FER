@@ -1,47 +1,46 @@
 # Dataset preprocessing
 
-The scripts here prepare RAF-DB and FER2013 images for MVGP-FER. Download the datasets yourself using the links in `dataset/`. Nothing is downloaded automatically.
+These scripts convert RAF-DB and FER2013 images into NumPy arrays and a CSV manifest. Get the datasets from the links in `dataset/`; they are not included here.
 
-## Setup
-
-Run these commands from the repository root:
+From the repository root, install the dependencies:
 
 ```powershell
 python -m pip install -r dataset_preprocess/requirements.txt
 ```
 
-## Run
-
-For a quick check with one image:
+## One image
 
 ```powershell
-python -m dataset_preprocess.run image --input "D:/data/face.jpg" --out "D:/MVGP-output/face.npy"
+python -m dataset_preprocess.run image --input "D:/data/face.jpg" --out "D:/output/face.npy"
 ```
 
-For the original FER2013 CSV:
+## FER2013
 
 ```powershell
-python -m dataset_preprocess.run fer2013 --csv "D:/data/FER2013/fer2013.csv" --out "D:/MVGP-output/fer2013"
+python -m dataset_preprocess.run fer2013 --csv "D:/data/FER2013/fer2013.csv" --out "D:/output/fer2013"
 ```
 
-For RAF-DB with its original `EmoLabel` and `Image/aligned` folders:
+## RAF-DB
+
+The input directory needs the original `EmoLabel` and `Image/aligned` folders.
 
 ```powershell
-python -m dataset_preprocess.run rafdb --root "D:/data/RAF-DB" --out "D:/MVGP-output/rafdb"
+python -m dataset_preprocess.run rafdb --root "D:/data/RAF-DB" --out "D:/output/rafdb"
 ```
 
-Each run saves float32 image arrays (`3 x 224 x 224`) and a `manifest.csv` listing the source split and class. Keep output outside the Git repository.
+Output contains `manifest.csv` and normalized image arrays of shape `(3, 224, 224)`. Keep it outside this Git repository.
 
-## Landmarks (optional)
-
-Landmark extraction needs MediaPipe, a Face Landmarker `.task` model, and the **exact 44 landmark indices** from the original experiment. Install MediaPipe with `python -m pip install mediapipe`, then add both flags to a dataset command:
+**Landmarks:** To extract them, install MediaPipe and provide both a Face Landmarker `.task` file and your verified list of 44 landmark indices:
 
 ```powershell
---landmarker-model "D:/models/face_landmarker.task" --landmark-indices "D:/private/landmark_indices.json"
+python -m pip install mediapipe
+python -m dataset_preprocess.run rafdb --root "D:/data/RAF-DB" --out "D:/output/rafdb" --landmarker-model "D:/models/face_landmarker.task" --landmark-indices "D:/private/indices.json"
 ```
 
-If landmarks cannot be detected, the manifest records `missing`. The image remains in the output.
+The manuscript does not list all 44 indices or the formulas for its 16 geometric cues. Those details must come from the original experiment; the current scripts do not create the complete 104-feature vector.
 
-The manuscript does not specify the complete 44-index selection or the individual formulas for the 16 geometric cues. This code does **not** invent them or produce a complete 104-feature vector. `standardize.py` contains general training-only statistics functions for use once the full feature definitions are available.
+To run the preprocessing tests:
 
-To run the checks: `python -m unittest discover -s dataset_preprocess/tests -v`.
+```powershell
+python -m unittest discover -s dataset_preprocess/tests -v
+```

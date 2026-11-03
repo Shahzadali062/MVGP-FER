@@ -1,1 +1,1 @@
-"""Training and evaluation utilities for reference ablation models."""
+"""Training and evaluation helpers for the visual baseline."""

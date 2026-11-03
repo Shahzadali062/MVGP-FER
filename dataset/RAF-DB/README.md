@@ -1,10 +1,5 @@
-﻿# RAF-DB Dataset
+# RAF-DB
 
-Official dataset access page:
+Get the dataset from the [official RAF-DB page](http://www.whdeng.cn/RAF/model1.html). You may need to request access from the dataset maintainers.
 
-http://www.whdeng.cn/RAF/model1.html
-
-Download or request the dataset directly from its official provider.
-
-Access may require approval from the dataset maintainers.
-No dataset files are hosted in this repository.
+Keep the downloaded images on your own computer. This repository only links to the dataset; it does not distribute any of its files.

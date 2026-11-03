@@ -1,13 +1,14 @@
-"""Visual branch shared by M1, M2, and M3."""
+"""Visual feature extractor and classifier."""
+
+from collections.abc import Callable
 
 import torch
 from torch import nn
 
-from .attention import MultiContextCoordinateAttention
 from .blocks import FusedStem, InvertedResidual
 from .mixer import GatedFacialSpatialMixer
 
-# Input, expanded, output, stride, repeats. Total: 11 inverted residual blocks.
+# Input channels, expansion channels, output channels, stride, repetitions.
 STAGES = (
     (32, 48, 48, 2, 1),
     (48, 64, 64, 1, 1),
@@ -21,21 +22,24 @@ STAGES = (
 
 
 class VisualBranch(nn.Module):
-    def __init__(self, use_attention: bool):
+    def __init__(self, attention_factory: Callable[[int], nn.Module] | None = None):
         super().__init__()
         self.stem = FusedStem()
         blocks = []
-        for in_channels, expanded, out_channels, stride, repeat in STAGES:
-            for index in range(repeat):
-                channels_in = in_channels if index == 0 else out_channels
+
+        for in_channels, expanded, out_channels, stride, repeats in STAGES:
+            for index in range(repeats):
+                input_channels = in_channels if index == 0 else out_channels
                 block_stride = stride if index == 0 else 1
-                attn = MultiContextCoordinateAttention(out_channels) if use_attention else None
-                blocks.append(InvertedResidual(channels_in, expanded, out_channels,
-                                               block_stride, attn))
+                attention = attention_factory(out_channels) if attention_factory else None
+                blocks.append(
+                    InvertedResidual(input_channels, expanded, out_channels, block_stride, attention)
+                )
+
         self.blocks = nn.Sequential(*blocks)
         self.mixer = GatedFacialSpatialMixer(256, kernel_size=9, dropout=0.1)
         self.projection = nn.Sequential(
-            nn.Conv2d(256, 640, kernel_size=1, bias=False),
+            nn.Conv2d(256, 640, 1, bias=False),
             nn.BatchNorm2d(640),
             nn.Hardswish(),
             nn.AdaptiveAvgPool2d(1),
@@ -44,18 +48,21 @@ class VisualBranch(nn.Module):
         self.classifier = nn.Linear(640, 7)
 
     def forward(self, images: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-        x = self.mixer(self.blocks(self.stem(images)))
-        features = self.projection(x)
-        logits = self.classifier(features)
-        return features, logits
+        features = self.projection(self.mixer(self.blocks(self.stem(images))))
+        return features, self.classifier(features)
 
 
 class VisualOnly(nn.Module):
-    def __init__(self, use_attention: bool):
+    """Runs the visual baseline without a geometric branch."""
+
+    def __init__(self):
         super().__init__()
-        self.visual = VisualBranch(use_attention=use_attention)
+        self.visual = VisualBranch()
 
     def forward(self, images: torch.Tensor, geometry=None, cues=None, valid=None):
         features, logits = self.visual(images)
-        return {"logits": logits, "visual_logits": logits,
-                "visual_features": features}
+        return {
+            "logits": logits,
+            "visual_logits": logits,
+            "visual_features": features,
+        }
