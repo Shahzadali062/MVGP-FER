@@ -1,0 +1,9 @@
+__pycache__/
+*.py[cod]
+.venv/
+*.npy
+*.npz
+*.task
+manifest.csv
+manifest.csv.tmp
+landmark_indices.json
