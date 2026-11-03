@@ -1,6 +1,5 @@
 # Dataset preprocessing
 
-These scripts convert RAF-DB and FER2013 images into NumPy arrays and a CSV manifest. Get the datasets from the links in `dataset/`; they are not included here.
 
 From the repository root, install the dependencies:
 
@@ -22,7 +21,6 @@ python -m dataset_preprocess.run fer2013 --csv "D:/data/FER2013/fer2013.csv" --o
 
 ## RAF-DB
 
-The input directory needs the original `EmoLabel` and `Image/aligned` folders.
 
 ```powershell
 python -m dataset_preprocess.run rafdb --root "D:/data/RAF-DB" --out "D:/output/rafdb"
