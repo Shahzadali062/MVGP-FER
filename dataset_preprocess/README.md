@@ -35,7 +35,6 @@ python -m pip install mediapipe
 python -m dataset_preprocess.run rafdb --root "D:/data/RAF-DB" --out "D:/output/rafdb" --landmarker-model "D:/models/face_landmarker.task" --landmark-indices "D:/private/indices.json"
 ```
 
-The manuscript does not list all 44 indices or the formulas for its 16 geometric cues. Those details must come from the original experiment; the current scripts do not create the complete 104-feature vector.
 
 To run the preprocessing tests:
 
