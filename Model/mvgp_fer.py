@@ -1,4 +1,4 @@
-"""Visual and landmark pathways with prototype-guided logit fusion."""
+
 
 import torch
 from torch import nn
@@ -46,7 +46,6 @@ class MVGPFER(nn.Module):
                 "gate": gate,
             }
 
-        # Invalid samples receive zero gate weight; their output is visual-only.
         landmark_logits = self.landmark_mlp(geometry)
         prototype_logits, alpha = self.prototype_matcher(cues)
         correction = landmark_logits + alpha * prototype_logits
