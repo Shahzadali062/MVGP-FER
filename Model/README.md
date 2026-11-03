@@ -12,6 +12,6 @@ This folder holds the network components used in the reference implementation.
 | `fusion.py` | Adaptive logit fusion |
 | `mvgp_fer.py` | M3 model assembly |
 
-The training entry point in `training/` selects M1 (visual baseline), M2 (visual with attention), or M3 (visual, attention, and geometry). The ablation variants are selected in code rather than stored in a separate `Ablations/` directory.
+
 
 The architecture follows the manuscript, but some implementation details cannot be checked against the original experimental source. In particular, the exact attention parameterization, prototype matrix, and geometric-cue formulas are not available here. This code has not been validated as a reproduction of the manuscript results.
