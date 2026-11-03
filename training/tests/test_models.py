@@ -1,5 +1,3 @@
-"""Checks for the M1, M2 and M3 reference models."""
-
 import json
 import tempfile
 import unittest
