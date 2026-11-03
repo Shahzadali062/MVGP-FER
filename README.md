@@ -2,60 +2,62 @@
 
 **Multi-Context Visual Representation and Geometric Prototype-Guided Learning for Facial Expression Recognition**
 
-MVGP-FER studies lightweight facial expression recognition using facial appearance and landmark-based geometry. The proposed method combines a compact visual pathway, expression-related geometric cues, class-specific prototypes, and adaptive prediction fusion.
+MVGP-FER explores lightweight facial expression recognition using visual features and facial landmark geometry. Its design combines a compact image encoder, multi-context attention, a small landmark network, class-specific geometric prototypes, and adaptive logit fusion.
 
-This repository contains dataset preparation tools, reusable model components, and a training script for the **visual-only M1 baseline**. It is a partial code release, not the complete implementation used for the manuscript experiments.
+This repository provides a **reference implementation** and utilities for preparing RAF-DB and FER2013. The code follows the architecture and settings described in the manuscript; it has not been verified as the original experiment source or used here to reproduce the manuscript's reported performance.
 
-## Repository structure
+## Repository
 
 | Folder | Contents |
 | --- | --- |
-| [`dataset/`](dataset/) | Official access information for RAF-DB and FER2013 |
-| [`dataset_preprocess/`](dataset_preprocess/) | Image preprocessing, dataset readers, optional landmark extraction, and tests |
-| [`Model/`](Model/) | Convolutional blocks, spatial mixer, visual branch, and fusion interface |
-| [`training/`](training/) | M1 baseline training, evaluation, and tests |
+| [`dataset/`](dataset/) | Links to obtain RAF-DB and FER2013 |
+| [`dataset_preprocess/`](dataset_preprocess/) | Dataset readers, image preprocessing, optional landmark extraction, tests |
+| [`Model/`](Model/) | Stem, residual blocks, attention, spatial mixer, geometry, fusion |
+| [`training/`](training/) | Training and evaluation scripts for M1, M2 and M3 |
+
+## Model configurations
+
+- **M1:** visual baseline with fused MBConv, inverted residual blocks and gated spatial mixing.
+- **M2:** M1 with multi-context coordinate attention.
+- **M3:** M2 with geometric prototype guidance and adaptive logit fusion.
+
+An `Ablations/` folder is not needed: the `--variant` argument selects the configuration.
 
 ## Getting started
 
-Use Python 3.10 or later. Run these commands from the repository root.
-
-Install the preprocessing and training dependencies:
+Install the dependencies with Python 3.10 or later:
 
 ```powershell
 python -m pip install -r dataset_preprocess/requirements.txt
 python -m pip install -r training/requirements.txt
 ```
 
-Prepare FER2013 from the original CSV:
-
-```powershell
-python -m dataset_preprocess.run fer2013 --csv "D:/data/FER2013/fer2013.csv" --out "D:/prepared/fer2013"
-```
-
-Or prepare aligned RAF-DB images:
+Prepare the dataset you have downloaded from its original source:
 
 ```powershell
 python -m dataset_preprocess.run rafdb --root "D:/data/RAF-DB" --out "D:/prepared/rafdb"
 ```
 
-Train the available visual baseline:
+Or use the original FER2013 CSV:
 
 ```powershell
-python -m training.train --dataset fer2013 --manifest "D:/prepared/fer2013/manifest.csv" --out "D:/experiments/M1.pt"
+python -m dataset_preprocess.run fer2013 --csv "D:/data/FER2013/fer2013.csv" --out "D:/prepared/fer2013"
 ```
 
-See [`dataset_preprocess/README.md`](dataset_preprocess/README.md) and [`training/README.md`](training/README.md) for the input format, validation split, and evaluation commands. Replace the example paths with your local directories.
+Train the visual baseline:
 
-## Data and release status
+```powershell
+python -m training.train --variant M1 --dataset rafdb --manifest "D:/prepared/rafdb/manifest.csv" --out "D:/experiments/M1.pt"
+```
 
-RAF-DB and FER2013 must be obtained from their original providers. No dataset images or annotations are included here.
+M2 can use the same prepared images. M3 additionally requires the original **16 geometric cue values per image** and a verified **7 x 16 prototype matrix**. The currently available preprocessing scripts do not calculate those cues. See [`training/README.md`](training/README.md) before attempting M3 training.
 
-The manuscript describes 44 selected facial landmarks and 16 geometric cues. The exact landmark selection, complete cue definitions, attention implementation, and class-prototype configuration are **not part of this release**. The full geometry-guided model and M2/M3 experiments therefore cannot be reproduced with this repository alone. The public training workflow supports M1 only.
+## Research status
 
-Keep downloaded datasets, generated arrays, and checkpoints outside the Git repository. The code has been checked with synthetic inputs, but the manuscript results have not been independently reproduced with this public release.
+No dataset images or pretrained weights are included. The code contains a reference interpretation of the manuscript's attention and geometry modules, but the exact attention implementation, 44 selected landmark indices, complete geometric cue formulas, prototype values, and original split/validation records have not been established from the available materials. Consequently this repository alone cannot reproduce the published accuracies.
 
-## Citation and use
+Keep raw data, generated arrays, private configuration values, and experiment checkpoints outside Git. The source has been exercised with synthetic inputs; that is a functionality check, not an experimental validation.
 
-For now, refer to the project as **MVGP-FER**. A formal citation will be added when the paper is published.
+## Citation and terms
 
-No repository-wide open-source license has been provided. The original dataset providers retain their own access and usage terms.
+Use the project title, **MVGP-FER**, until a publication citation is available. No repository-wide license has been supplied. RAF-DB and FER2013 have their own access and usage terms.

@@ -1,11 +1,17 @@
 # Model
 
-The model code is split into reusable parts:
+This folder holds the network components used in the reference implementation.
 
-- `blocks.py` — convolutional stem and residual blocks
-- `mixer.py` — spatial token mixing
-- `visual.py` — visual feature extractor and seven-class classifier
-- `fusion.py` — adaptive logit fusion
-- `mvgp_fer.py` — assembly interface for externally supplied model components
+| File | Purpose |
+| --- | --- |
+| `blocks.py` | Fused MBConv stem and inverted residual blocks |
+| `attention.py` | Multi-context coordinate attention |
+| `mixer.py` | Gated facial spatial mixing |
+| `visual.py` | Visual branch and classifier |
+| `geometry.py` | Landmark MLP and prototype matching |
+| `fusion.py` | Adaptive logit fusion |
+| `mvgp_fer.py` | M3 model assembly |
 
-`attention.py` and `geometry.py` have been removed. The visual-only baseline still works, but the full MVGP-FER model needs the original attention module, landmark model and class prototypes. These are not included here. The public training script supports the visual baseline only.
+The training entry point in `training/` selects M1 (visual baseline), M2 (visual with attention), or M3 (visual, attention, and geometry). The ablation variants are selected in code rather than stored in a separate `Ablations/` directory.
+
+The architecture follows the manuscript, but some implementation details cannot be checked against the original experimental source. In particular, the exact attention parameterization, prototype matrix, and geometric-cue formulas are not available here. This code has not been validated as a reproduction of the manuscript results.

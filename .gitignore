@@ -1,0 +1,27 @@
+# Local outputs and environments
+/.venv/
+/venv/
+/private/
+/data/
+/prepared/
+/runs/
+/checkpoints/
+/outputs/
+
+# Ablation folder intentionally removed from public repository
+/Ablations/
+
+# Training artifacts
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.npy
+*.npz
+
+# Python and editor files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ipynb_checkpoints/
+.DS_Store

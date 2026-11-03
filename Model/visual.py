@@ -1,4 +1,4 @@
-"""Visual feature extractor and classifier."""
+"""Compact visual encoder and seven-class classifier."""
 
 from collections.abc import Callable
 
@@ -8,7 +8,7 @@ from torch import nn
 from .blocks import FusedStem, InvertedResidual
 from .mixer import GatedFacialSpatialMixer
 
-# Input channels, expansion channels, output channels, stride, repetitions.
+# Input channels, expansion, output channels, stride, repetitions.
 STAGES = (
     (32, 48, 48, 2, 1),
     (48, 64, 64, 1, 1),
@@ -26,15 +26,12 @@ class VisualBranch(nn.Module):
         super().__init__()
         self.stem = FusedStem()
         blocks = []
-
-        for in_channels, expanded, out_channels, stride, repeats in STAGES:
+        for in_ch, expanded, out_ch, stride, repeats in STAGES:
             for index in range(repeats):
-                input_channels = in_channels if index == 0 else out_channels
-                block_stride = stride if index == 0 else 1
-                attention = attention_factory(out_channels) if attention_factory else None
-                blocks.append(
-                    InvertedResidual(input_channels, expanded, out_channels, block_stride, attention)
-                )
+                current_in = in_ch if index == 0 else out_ch
+                current_stride = stride if index == 0 else 1
+                attention = attention_factory(out_ch) if attention_factory else None
+                blocks.append(InvertedResidual(current_in, expanded, out_ch, current_stride, attention))
 
         self.blocks = nn.Sequential(*blocks)
         self.mixer = GatedFacialSpatialMixer(256, kernel_size=9, dropout=0.1)
@@ -53,16 +50,14 @@ class VisualBranch(nn.Module):
 
 
 class VisualOnly(nn.Module):
-    """Runs the visual baseline without a geometric branch."""
-
-    def __init__(self):
+    def __init__(self, use_attention: bool = False):
         super().__init__()
-        self.visual = VisualBranch()
+        if use_attention:
+            from .attention import MultiContextCoordinateAttention
+            self.visual = VisualBranch(attention_factory=MultiContextCoordinateAttention)
+        else:
+            self.visual = VisualBranch()
 
     def forward(self, images: torch.Tensor, geometry=None, cues=None, valid=None):
         features, logits = self.visual(images)
-        return {
-            "logits": logits,
-            "visual_logits": logits,
-            "visual_features": features,
-        }
+        return {"logits": logits, "visual_logits": logits, "visual_features": features}

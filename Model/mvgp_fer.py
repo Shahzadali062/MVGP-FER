@@ -1,62 +1,56 @@
-"""Model assembly for projects with their own attention and geometry modules.
-
-The public repository does not include the attention implementation, landmark
-model or fixed prototype values. Supply those components explicitly.
-"""
-
-from collections.abc import Callable
+"""Visual and landmark pathways with prototype-guided logit fusion."""
 
 import torch
 from torch import nn
 
+from .attention import MultiContextCoordinateAttention
 from .fusion import AdaptiveLogitFusion
+from .geometry import LandmarkMLP, PrototypeComparison
 from .visual import VisualBranch
 
 
 class MVGPFER(nn.Module):
-    def __init__(
-        self,
-        landmark_mlp: nn.Module,
-        prototype_matcher: nn.Module,
-        attention_factory: Callable[[int], nn.Module],
-    ):
-        super().__init__()
-        if not isinstance(landmark_mlp, nn.Module):
-            raise TypeError("landmark_mlp must be a torch.nn.Module")
-        if not isinstance(prototype_matcher, nn.Module):
-            raise TypeError("prototype_matcher must be a torch.nn.Module")
-        if not callable(attention_factory):
-            raise TypeError("attention_factory must be callable")
+    """M3 reference implementation.
 
-        self.visual = VisualBranch(attention_factory=attention_factory)
-        self.landmark_mlp = landmark_mlp
-        self.prototype_matcher = prototype_matcher
+    Expects genuine standardized landmark features and raw geometric cues.
+    Class prototype values must come from the original experiment records.
+    """
+
+    def __init__(self, prototypes: torch.Tensor):
+        super().__init__()
+        self.visual = VisualBranch(attention_factory=MultiContextCoordinateAttention)
+        self.landmark_mlp = LandmarkMLP()
+        self.prototype_matcher = PrototypeComparison(prototypes)
         self.fusion = AdaptiveLogitFusion()
 
-    def forward(
-        self,
-        images: torch.Tensor,
-        geometry: torch.Tensor,
-        cues: torch.Tensor,
-        valid: torch.Tensor,
-    ):
+    def forward(self, images: torch.Tensor, geometry: torch.Tensor,
+                cues: torch.Tensor, valid: torch.Tensor):
         features, visual_logits = self.visual(images)
         batch = images.shape[0]
         if geometry.shape != (batch, 104) or cues.shape != (batch, 16):
-            raise ValueError("Expected geometry (B,104) and cues (B,16)")
+            raise ValueError("Expected geometry (B,104) and raw cues (B,16)")
         if valid.shape != (batch,) or valid.dtype != torch.bool:
-            raise ValueError("Expected a boolean validity mask of shape (B,)")
-        if not torch.isfinite(geometry).all() or not torch.isfinite(cues).all():
-            raise ValueError("Geometry and cue values must be finite")
+            raise ValueError("Expected a bool landmark-valid mask with shape (B,)")
+        if not bool(torch.isfinite(geometry).all()) or not bool(torch.isfinite(cues).all()):
+            raise ValueError("Landmark features and cues must be finite")
 
+        if not bool(valid.any()):
+            zero = visual_logits.new_zeros((batch, 7))
+            gate = visual_logits.new_zeros((batch, 1))
+            return {
+                "logits": visual_logits,
+                "visual_logits": visual_logits,
+                "visual_features": features,
+                "landmark_logits": zero,
+                "prototype_logits": zero,
+                "gate": gate,
+            }
+
+        # Invalid samples receive zero gate weight; their output is visual-only.
         landmark_logits = self.landmark_mlp(geometry)
         prototype_logits, alpha = self.prototype_matcher(cues)
-        if landmark_logits.shape != (batch, 7) or prototype_logits.shape != (batch, 7):
-            raise ValueError("Landmark and prototype modules must return (B,7) logits")
-        corrected_logits = landmark_logits + alpha * prototype_logits
-        logits, gate = self.fusion(
-            features, visual_logits, corrected_logits, prototype_logits, valid
-        )
+        correction = landmark_logits + alpha * prototype_logits
+        logits, gate = self.fusion(features, visual_logits, correction, prototype_logits, valid)
         return {
             "logits": logits,
             "visual_logits": visual_logits,

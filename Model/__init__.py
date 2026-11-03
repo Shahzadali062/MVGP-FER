@@ -1,1 +1,1 @@
-"""Reusable network components."""
+"""MVGP-FER model components."""
